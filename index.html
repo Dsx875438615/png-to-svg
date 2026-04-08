@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PrivySVG - 浏览器端PNG转SVG工具</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>PrivySVG</h1>
+      <p>浏览器端PNG转SVG工具</p>
+    </header>
+
+    <main>
+      <section class="upload-section">
+        <div class="upload-area" id="uploadArea">
+          <div class="upload-content">
+            <div class="upload-icon">📁</div>
+            <h3>点击或拖拽图片至此上传</h3>
+            <p>支持PNG、JPG、WebP、BMP、GIF格式</p>
+            <p class="file-limit">最大文件大小：10MB | 最大分辨率：2000x2000</p>
+            <p class="privacy-note">🔒所有图片处理均在浏览器本地完成，不会上传任何服务器，可离线使用，保护你的隐私</p>
+          </div>
+          <input type="file" id="fileInput" accept="image/*" style="display: none;">
+        </div>
+        <div class="error-message" id="errorMessage"></div>
+      </section>
+
+      <section class="preview-section">
+        <div class="preview-container">
+          <div class="preview-left">
+            <h3>原图</h3>
+            <div class="image-container" id="originalImageContainer">
+              <div class="empty-state" id="originalEmptyState">
+                <div class="empty-icon">🖼️</div>
+                <p>请上传图片</p>
+              </div>
+              <img id="originalImage" src="" alt="原始图片" style="display: none;">
+              <div class="image-info" id="imageInfo"></div>
+            </div>
+          </div>
+          <div class="preview-right">
+            <h3>SVG预览</h3>
+            <div class="image-container" id="svgPreviewContainer">
+              <div id="svgPreview"></div>
+              <div class="zoom-info" id="zoomInfo">100%</div>
+            </div>
+          </div>
+        </div>
+        <div class="export-buttons">
+          <button id="downloadBtn" disabled>⬇️ 下载SVG</button>
+          <button id="copyBtn" disabled>📋 复制代码</button>
+          <div class="copy-success" id="copySuccess">✅ 已复制！</div>
+        </div>
+      </section>
+
+      <section class="config-section">
+        <div class="config-header" id="configHeader">
+          <h3>⚙️ 转换设置</h3>
+        </div>
+        <div class="config-content" id="configContent">
+          <div class="config-group">
+            <label>色彩模式</label>
+            <div class="radio-group">
+              <label><input type="radio" name="colorMode" value="color" checked> 彩色</label>
+              <label><input type="radio" name="colorMode" value="bw"> 黑白</label>
+            </div>
+          </div>
+
+          <div class="config-group">
+            <label>路径模式</label>
+            <div class="path-mode-cards">
+              <div class="path-mode-card active" data-value="spline">
+                <div class="path-mode-icon">
+                  <svg viewBox="0 0 60 40" width="60" height="40">
+                    <path d="M5,30 Q15,10 25,25 T45,20 T55,15" fill="none" stroke="#3498db" stroke-width="3" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <div class="path-mode-title">样条</div>
+                <div class="path-mode-desc">平滑流畅</div>
+              </div>
+              <div class="path-mode-card" data-value="polygon">
+                <div class="path-mode-icon">
+                  <svg viewBox="0 0 60 40" width="60" height="40">
+                    <polyline points="5,30 15,15 25,28 35,18 45,25 55,12" fill="none" stroke="#3498db" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div class="path-mode-title">多边形</div>
+                <div class="path-mode-desc">棱角分明</div>
+              </div>
+              <div class="path-mode-card" data-value="pixel">
+                <div class="path-mode-icon">
+                  <svg viewBox="0 0 60 40" width="60" height="40">
+                    <rect x="8" y="8" width="18" height="18" fill="#3498db" rx="2"/>
+                    <rect x="34" y="8" width="18" height="18" fill="#3498db" rx="2"/>
+                    <rect x="8" y="28" width="18" height="10" fill="#3498db" rx="2"/>
+                    <rect x="34" y="28" width="18" height="10" fill="#3498db" rx="2"/>
+                  </svg>
+                </div>
+                <div class="path-mode-title">像素</div>
+                <div class="path-mode-desc">保留方块感</div>
+              </div>
+            </div>
+            <input type="hidden" name="pathMode" id="pathModeInput" value="spline">
+          </div>
+
+          <div class="config-group">
+            <label>色彩精度 <span class="help-icon" title="数值越高保留颜色细节越多，文件越大">?</span></label>
+            <input type="range" id="colorPrecision" min="1" max="8" value="6">
+            <span class="range-value" id="colorPrecisionValue">6</span>
+          </div>
+
+          <div class="config-group">
+            <label>过滤斑点 <span class="help-icon" title="过滤小于指定像素面积的噪点，单位px²">?</span></label>
+            <input type="range" id="filterSpeckles" min="0" max="128" value="4">
+            <span class="range-value" id="filterSpecklesValue">4</span>
+          </div>
+
+          <div class="config-group">
+            <label>渐变步长 <span class="help-icon" title="控制颜色分层敏感度，值越大颜色过渡越平滑">?</span></label>
+            <input type="range" id="gradientStep" min="0" max="128" value="16">
+            <span class="range-value" id="gradientStepValue">16</span>
+          </div>
+
+          <div class="config-group">
+            <label>角点阈值 <span class="help-icon" title="最小角度判定为角点，影响路径简化">?</span></label>
+            <input type="range" id="cornerThreshold" min="0" max="180" value="60">
+            <span class="range-value" id="cornerThresholdValue">60°</span>
+          </div>
+
+          <div class="config-group">
+            <label>段长度 <span class="help-icon" title="路径平滑度控制，值越大越平滑">?</span></label>
+            <input type="range" id="segmentLength" min="3.5" max="10" step="0.1" value="4.0">
+            <span class="range-value" id="segmentLengthValue">4.0</span>
+          </div>
+
+          <div class="config-group">
+            <label>路径精度 <span class="help-icon" title="SVG路径坐标小数位数，影响文件精度和大小">?</span></label>
+            <input type="range" id="pathPrecision" min="0" max="16" value="2">
+            <span class="range-value" id="pathPrecisionValue">2</span>
+          </div>
+
+          <div class="preset-buttons">
+            <button id="presetHigh">高质量</button>
+            <button id="presetBalanced">平衡</button>
+            <button id="presetFast">快速</button>
+          </div>
+        </div>
+      </section>
+
+
+    </main>
+
+
+
+    <div class="conversion-overlay" id="conversionOverlay">
+      <div class="conversion-content">
+        <div class="loading-spinner"></div>
+        <p>正在转换...</p>
+        <div class="loading-progress">
+          <div class="loading-bar" id="conversionBar"></div>
+        </div>
+      </div>
+    </div>
+
+
+
+    <div class="compatibility-modal" id="compatibilityModal">
+      <div class="modal-content">
+        <h3>浏览器兼容性</h3>
+        <p>您的浏览器不支持WebAssembly，无法运行PrivySVG。</p>
+        <p>请升级到最新版本的Chrome、Edge、Firefox或Safari浏览器。</p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
