@@ -5,6 +5,7 @@ class PrivySVG {
     this.currentSVG = null;
     this.isLoading = false;
     this.isConverting = false;
+    this.debounceTimer = null;
     
     this.init();
   }
@@ -27,36 +28,49 @@ class PrivySVG {
   }
 
   bindEvents() {
+    this.bindUploadEvents();
+    this.bindConfigEvents();
+    this.bindExportEvents();
+    this.bindPreviewEvents();
+  }
+
+  bindUploadEvents() {
     // 上传区域点击事件
-    document.getElementById('uploadArea').addEventListener('click', () => {
-      document.getElementById('fileInput').click();
-    });
+    const uploadArea = document.getElementById('uploadArea');
+    if (uploadArea) {
+      uploadArea.addEventListener('click', () => {
+        const fileInput = document.getElementById('fileInput');
+        if (fileInput) fileInput.click();
+      });
+
+      // 拖拽事件
+      uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+      });
+
+      uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('dragover');
+      });
+
+      uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+          this.handleFile(e.dataTransfer.files[0]);
+        }
+      });
+    }
 
     // 文件选择事件
-    document.getElementById('fileInput').addEventListener('change', (e) => {
-      if (e.target.files.length > 0) {
-        this.handleFile(e.target.files[0]);
-      }
-    });
-
-    // 拖拽事件
-    const uploadArea = document.getElementById('uploadArea');
-    uploadArea.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      uploadArea.classList.add('dragover');
-    });
-
-    uploadArea.addEventListener('dragleave', () => {
-      uploadArea.classList.remove('dragover');
-    });
-
-    uploadArea.addEventListener('drop', (e) => {
-      e.preventDefault();
-      uploadArea.classList.remove('dragover');
-      if (e.dataTransfer.files.length > 0) {
-        this.handleFile(e.dataTransfer.files[0]);
-      }
-    });
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput) {
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+          this.handleFile(e.target.files[0]);
+        }
+      });
+    }
 
     // 剪贴板粘贴事件
     document.addEventListener('paste', (e) => {
@@ -69,9 +83,9 @@ class PrivySVG {
         }
       }
     });
+  }
 
-
-
+  bindConfigEvents() {
     // 配置参数事件
     const rangeInputs = document.querySelectorAll('input[type="range"]');
     rangeInputs.forEach(input => {
@@ -90,103 +104,109 @@ class PrivySVG {
         // 添加当前卡片的active类
         card.classList.add('active');
         // 更新隐藏的input值
-        document.getElementById('pathModeInput').value = card.dataset.value;
-        // 触发转换
-        this.debounceConvert();
+        const pathModeInput = document.getElementById('pathModeInput');
+        if (pathModeInput) {
+          pathModeInput.value = card.dataset.value;
+          // 触发转换
+          this.debounceConvert();
+        }
       });
     });
 
     // 预设按钮事件
-    document.getElementById('presetHigh').addEventListener('click', () => {
-      this.applyPreset('high');
-    });
-
-    document.getElementById('presetBalanced').addEventListener('click', () => {
-      this.applyPreset('balanced');
-    });
-
-    document.getElementById('presetFast').addEventListener('click', () => {
-      this.applyPreset('fast');
-    });
-
-    // 导出按钮事件
-    document.getElementById('downloadBtn').addEventListener('click', () => {
-      this.downloadSVG();
-    });
-
-    document.getElementById('copyBtn').addEventListener('click', () => {
-      this.copySVGCode();
-    });
-
-
+    const presetHigh = document.getElementById('presetHigh');
+    const presetBalanced = document.getElementById('presetBalanced');
+    const presetFast = document.getElementById('presetFast');
+    
+    if (presetHigh) presetHigh.addEventListener('click', () => this.applyPreset('high'));
+    if (presetBalanced) presetBalanced.addEventListener('click', () => this.applyPreset('balanced'));
+    if (presetFast) presetFast.addEventListener('click', () => this.applyPreset('fast'));
 
     // 配置面板折叠事件（移动端）
-    document.getElementById('configHeader').addEventListener('click', () => {
-      const configContent = document.getElementById('configContent');
-      const configHeader = document.getElementById('configHeader');
-      configContent.classList.toggle('collapsed');
-      configHeader.classList.toggle('collapsed');
-    });
+    const configHeader = document.getElementById('configHeader');
+    if (configHeader) {
+      configHeader.addEventListener('click', () => {
+        const configContent = document.getElementById('configContent');
+        if (configContent) {
+          configContent.classList.toggle('collapsed');
+          configHeader.classList.toggle('collapsed');
+        }
+      });
+    }
+  }
 
+  bindExportEvents() {
+    // 导出按钮事件
+    const downloadBtn = document.getElementById('downloadBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    
+    if (downloadBtn) downloadBtn.addEventListener('click', () => this.downloadSVG());
+    if (copyBtn) copyBtn.addEventListener('click', () => this.copySVGCode());
+  }
+
+  bindPreviewEvents() {
     // SVG预览区域缩放和平移
     const svgPreviewContainer = document.getElementById('svgPreviewContainer');
-    let isDragging = false;
-    let startX, startY, scrollLeft, scrollTop;
+    if (svgPreviewContainer) {
+      let isDragging = false;
+      let startX, startY, scrollLeft, scrollTop;
 
-    svgPreviewContainer.addEventListener('mousedown', (e) => {
-      isDragging = true;
-      startX = e.pageX - svgPreviewContainer.offsetLeft;
-      startY = e.pageY - svgPreviewContainer.offsetTop;
-      scrollLeft = svgPreviewContainer.scrollLeft;
-      scrollTop = svgPreviewContainer.scrollTop;
-    });
+      svgPreviewContainer.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startX = e.pageX - svgPreviewContainer.offsetLeft;
+        startY = e.pageY - svgPreviewContainer.offsetTop;
+        scrollLeft = svgPreviewContainer.scrollLeft;
+        scrollTop = svgPreviewContainer.scrollTop;
+      });
 
-    svgPreviewContainer.addEventListener('mouseleave', () => {
-      isDragging = false;
-    });
+      svgPreviewContainer.addEventListener('mouseleave', () => {
+        isDragging = false;
+      });
 
-    svgPreviewContainer.addEventListener('mouseup', () => {
-      isDragging = false;
-    });
+      svgPreviewContainer.addEventListener('mouseup', () => {
+        isDragging = false;
+      });
 
-    svgPreviewContainer.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-      e.preventDefault();
-      const x = e.pageX - svgPreviewContainer.offsetLeft;
-      const y = e.pageY - svgPreviewContainer.offsetTop;
-      const walkX = (x - startX) * 2;
-      const walkY = (y - startY) * 2;
-      svgPreviewContainer.scrollLeft = scrollLeft - walkX;
-      svgPreviewContainer.scrollTop = scrollTop - walkY;
-    });
+      svgPreviewContainer.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        const x = e.pageX - svgPreviewContainer.offsetLeft;
+        const y = e.pageY - svgPreviewContainer.offsetTop;
+        const walkX = (x - startX) * 2;
+        const walkY = (y - startY) * 2;
+        svgPreviewContainer.scrollLeft = scrollLeft - walkX;
+        svgPreviewContainer.scrollTop = scrollTop - walkY;
+      });
 
-    svgPreviewContainer.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      const zoomSpeed = 0.1;
-      const rect = svgPreviewContainer.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-      
-      const zoom = e.deltaY > 0 ? 0.9 : 1.1;
-      const svg = document.querySelector('#svgPreview svg');
-      if (svg) {
-        const currentScale = parseFloat(svg.style.transform.replace('scale(', '')) || 1;
-        const newScale = Math.max(0.1, Math.min(5, currentScale * zoom));
-        svg.style.transform = `scale(${newScale})`;
-        document.getElementById('zoomInfo').textContent = `${Math.round(newScale * 100)}%`;
-      }
-    });
+      svgPreviewContainer.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const zoom = e.deltaY > 0 ? 0.9 : 1.1;
+        const svg = document.querySelector('#svgPreview svg');
+        const zoomInfo = document.getElementById('zoomInfo');
+        if (svg) {
+          const currentScale = parseFloat(svg.style.transform.replace('scale(', '')) || 1;
+          const newScale = Math.max(0.1, Math.min(5, currentScale * zoom));
+          svg.style.transform = `scale(${newScale})`;
+          if (zoomInfo) {
+            zoomInfo.textContent = `${Math.round(newScale * 100)}%`;
+          }
+        }
+      });
+    }
   }
 
   checkBrowserCompatibility() {
     console.log('WebAssembly object:', WebAssembly);
     console.log('typeof WebAssembly:', typeof WebAssembly);
-    if (typeof WebAssembly === 'undefined') {
-      console.log('WebAssembly is undefined, showing compatibility modal');
-      document.getElementById('compatibilityModal').style.display = 'flex';
-    } else {
-      console.log('WebAssembly is supported, hiding compatibility modal');
-      document.getElementById('compatibilityModal').style.display = 'none';
+    const compatibilityModal = document.getElementById('compatibilityModal');
+    if (compatibilityModal) {
+      if (typeof WebAssembly === 'undefined') {
+        console.log('WebAssembly is undefined, showing compatibility modal');
+        compatibilityModal.style.display = 'flex';
+      } else {
+        console.log('WebAssembly is supported, hiding compatibility modal');
+        compatibilityModal.style.display = 'none';
+      }
     }
   }
 
@@ -254,10 +274,13 @@ class PrivySVG {
     if (emptyState) {
       emptyState.style.display = 'none';
     }
-    originalImage.style.display = 'block';
-    
-    originalImage.src = img.src;
-    imageInfo.textContent = `${img.width} × ${img.height}`;
+    if (originalImage) {
+      originalImage.style.display = 'block';
+      originalImage.src = img.src;
+    }
+    if (imageInfo) {
+      imageInfo.textContent = `${img.width} × ${img.height}`;
+    }
   }
 
   updateRangeValue(input) {
@@ -399,9 +422,12 @@ class PrivySVG {
     } else if (config.pathMode === 'polygon') {
       // 多边形模式：使用直线段组成的多边形
       svg += this.generatePolygonPaths(data, img.width, img.height, config);
-    } else {
+    } else if (config.pathMode === 'pixel') {
       // 像素模式：使用矩形像素块
       svg += this.generatePixelRects(data, img.width, img.height, config);
+    } else {
+      // 默认使用样条模式
+      svg += this.generateSplinePaths(data, img.width, img.height, config);
     }
     
     svg += `</svg>`;
@@ -410,7 +436,7 @@ class PrivySVG {
 
   generatePixelRects(data, width, height, config) {
     let elements = '';
-    const step = 6; // 像素块大小 - 较大的方块产生明显的像素感
+    const step = 16 - config.colorPrecision; // 根据色彩精度调整像素块大小
     
     for (let y = 0; y < height; y += step) {
       for (let x = 0; x < width; x += step) {
@@ -426,7 +452,12 @@ class PrivySVG {
             const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
             color = `rgb(${gray}, ${gray}, ${gray})`;
           } else {
-            color = `rgb(${r}, ${g}, ${b})`;
+            // 根据色彩精度调整颜色
+            const precision = Math.pow(2, 8 - config.colorPrecision);
+            const adjustedR = Math.round(r / precision) * precision;
+            const adjustedG = Math.round(g / precision) * precision;
+            const adjustedB = Math.round(b / precision) * precision;
+            color = `rgb(${adjustedR}, ${adjustedG}, ${adjustedB})`;
           }
           // 像素模式：使用明显的方块
           elements += `<rect x="${x}" y="${y}" width="${step}" height="${step}" fill="${color}" />`;
@@ -438,7 +469,7 @@ class PrivySVG {
 
   generatePolygonPaths(data, width, height, config) {
     let elements = '';
-    const step = 10; // 多边形网格大小
+    const step = Math.max(5, 15 - config.colorPrecision); // 根据色彩精度调整网格大小
     
     for (let y = 0; y < height - step; y += step) {
       for (let x = 0; x < width - step; x += step) {
@@ -458,7 +489,12 @@ class PrivySVG {
             const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
             color = `rgb(${gray}, ${gray}, ${gray})`;
           } else {
-            color = `rgb(${r}, ${g}, ${b})`;
+            // 根据色彩精度调整颜色
+            const precision = Math.pow(2, 8 - config.colorPrecision);
+            const adjustedR = Math.round(r / precision) * precision;
+            const adjustedG = Math.round(g / precision) * precision;
+            const adjustedB = Math.round(b / precision) * precision;
+            color = `rgb(${adjustedR}, ${adjustedG}, ${adjustedB})`;
           }
           
           // 多边形模式：使用三角形产生棱角分明的效果
@@ -478,7 +514,7 @@ class PrivySVG {
 
   generateSplinePaths(data, width, height, config) {
     let elements = '';
-    const step = 6; // 更小的步长，更平滑
+    const step = Math.max(4, 10 - config.colorPrecision); // 根据色彩精度调整步长
     
     // 使用网格生成平滑的曲线填充区域
     for (let y = 0; y < height - step; y += step) {
@@ -495,7 +531,12 @@ class PrivySVG {
             const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
             color = `rgb(${gray}, ${gray}, ${gray})`;
           } else {
-            color = `rgb(${r}, ${g}, ${b})`;
+            // 根据色彩精度调整颜色
+            const precision = Math.pow(2, 8 - config.colorPrecision);
+            const adjustedR = Math.round(r / precision) * precision;
+            const adjustedG = Math.round(g / precision) * precision;
+            const adjustedB = Math.round(b / precision) * precision;
+            color = `rgb(${adjustedR}, ${adjustedG}, ${adjustedB})`;
           }
           
           // 样条模式：使用圆角矩形产生平滑效果
@@ -509,6 +550,7 @@ class PrivySVG {
 
   displaySVG(svg) {
     const svgPreview = document.getElementById('svgPreview');
+    if (!svgPreview) return;
     
     // 使用DOMParser解析SVG字符串
     const parser = new DOMParser();
@@ -531,13 +573,26 @@ class PrivySVG {
     } else {
       svgPreview.innerHTML = svg;
     }
+    
+    // 重置缩放信息
+    const zoomInfo = document.getElementById('zoomInfo');
+    if (zoomInfo) {
+      zoomInfo.textContent = '100%';
+    }
+    
+    const previewSvg = svgPreview.querySelector('svg');
+    if (previewSvg) {
+      previewSvg.style.transform = 'scale(1)';
+    }
   }
 
 
 
   enableExportButtons() {
-    document.getElementById('downloadBtn').disabled = false;
-    document.getElementById('copyBtn').disabled = false;
+    const downloadBtn = document.getElementById('downloadBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    if (downloadBtn) downloadBtn.disabled = false;
+    if (copyBtn) copyBtn.disabled = false;
   }
 
   downloadSVG() {
@@ -562,15 +617,52 @@ class PrivySVG {
     if (!this.currentSVG) return;
 
     try {
-      await navigator.clipboard.writeText(this.currentSVG);
-      const copySuccess = document.getElementById('copySuccess');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        // 使用现代剪贴板API
+        await navigator.clipboard.writeText(this.currentSVG);
+        this.showCopySuccess();
+      } else {
+        // 降级方案：使用传统的execCommand方法
+        this.fallbackCopyTextToClipboard(this.currentSVG);
+      }
+    } catch (error) {
+      console.error('复制失败:', error);
+      this.showError('复制失败，请手动复制');
+    }
+  }
+
+  showCopySuccess() {
+    const copySuccess = document.getElementById('copySuccess');
+    if (copySuccess) {
       copySuccess.classList.add('show');
       setTimeout(() => {
         copySuccess.classList.remove('show');
       }, 2000);
+    }
+  }
+
+  fallbackCopyTextToClipboard(text) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    try {
+      const successful = document.execCommand('copy');
+      if (successful) {
+        this.showCopySuccess();
+      } else {
+        throw new Error('复制命令执行失败');
+      }
     } catch (error) {
-      console.error('复制失败:', error);
+      console.error('降级复制失败:', error);
       this.showError('复制失败，请手动复制');
+    } finally {
+      document.body.removeChild(textArea);
     }
   }
 
@@ -580,26 +672,37 @@ class PrivySVG {
 
   showConversion() {
     this.isConverting = true;
-    document.getElementById('conversionOverlay').style.display = 'flex';
+    const conversionOverlay = document.getElementById('conversionOverlay');
+    if (conversionOverlay) {
+      conversionOverlay.style.display = 'flex';
+    }
   }
 
   hideConversion() {
     this.isConverting = false;
-    document.getElementById('conversionOverlay').style.display = 'none';
+    const conversionOverlay = document.getElementById('conversionOverlay');
+    if (conversionOverlay) {
+      conversionOverlay.style.display = 'none';
+    }
   }
 
   updateConversionProgress(progress) {
-    document.getElementById('conversionBar').style.width = `${progress}%`;
+    const conversionBar = document.getElementById('conversionBar');
+    if (conversionBar) {
+      conversionBar.style.width = `${progress}%`;
+    }
   }
 
   showError(message) {
     const errorMessage = document.getElementById('errorMessage');
-    errorMessage.textContent = message;
-    errorMessage.style.display = 'block';
-    
-    setTimeout(() => {
-      errorMessage.style.display = 'none';
-    }, 3000);
+    if (errorMessage) {
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+      
+      setTimeout(() => {
+        errorMessage.style.display = 'none';
+      }, 3000);
+    }
   }
 }
 
